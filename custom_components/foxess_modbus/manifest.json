@@ -1,6 +1,7 @@
 {
   "domain": "foxess_modbus",
   "name": "FoxESS - Modbus",
+  "dependencies": ["modbus"],
   "after_dependencies": ["energy", "integration", "logbook"],
   "codeowners": ["@nathanmarlor"],
   "config_flow": true,

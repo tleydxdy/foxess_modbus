@@ -21,10 +21,10 @@ from homeassistant.helpers.issue_registry import IssueSeverity
 
 from .client.modbus_client import ModbusClient
 from .client.modbus_client import ModbusClientFailedError
+from .client.modbus_client import is_illegal_address_error
 from .common.entity_controller import EntityController
 from .common.entity_controller import EntityRemoteControlManager
 from .common.entity_controller import ModbusControllerEntity
-from .common.exceptions import AutoconnectFailedError
 from .common.exceptions import UnsupportedInverterError
 from .common.types import RegisterPollType
 from .common.types import RegisterType
@@ -33,13 +33,9 @@ from .const import DOMAIN
 from .const import ENTITY_ID_PREFIX
 from .const import FRIENDLY_NAME
 from .const import INVERTER_MODEL
-from .const import MAX_READ
 from .inverter_profiles import INVERTER_PROFILES
 from .inverter_profiles import InverterModelConnectionTypeProfile
 from .remote_control_manager import RemoteControlManager
-from .vendor.pymodbus import ConnectionException
-from .vendor.pymodbus import ExceptionResponse
-from .vendor.pymodbus import ModbusExceptions
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -111,7 +107,7 @@ def _acquire_nonblocking(lock: threading.Lock) -> Iterator[bool]:
 
 
 class ModbusController(EntityController, UnloadController):
-    """Class to manage forecast retrieval"""
+    """Class which polls an inverter and exposes its register values to entities"""
 
     def __init__(
         self,
@@ -316,14 +312,6 @@ class ModbusController(EntityController, UnloadController):
                     changed_addresses,
                 )
                 self._notify_update(changed_addresses)
-            except ConnectionException as ex:
-                exception = ex
-                _LOGGER.debug(
-                    "Failed to connect to %s %s: %s",
-                    self._client,
-                    self._slave,
-                    ex,
-                )
             except ModbusClientFailedError as ex:
                 exception = ex
                 _LOGGER.debug(
@@ -484,12 +472,6 @@ class ModbusController(EntityController, UnloadController):
 
     # List of (start address, [read values starting at that address])
     async def _read_all_registers(self) -> list[tuple[int, Iterable[int | None]]]:
-        def _is_illegal_address(ex: ModbusClientFailedError) -> bool:
-            return (
-                isinstance(ex.response, ExceptionResponse)
-                and ex.response.exception_code == ModbusExceptions.IllegalAddress
-            )
-
         read_values: list[tuple[int, Iterable[int | None]]] = []
 
         read_ranges = self._create_read_ranges(
@@ -513,7 +495,7 @@ class ModbusController(EntityController, UnloadController):
                 read_values.append((start_address, reads))
 
             except ModbusClientFailedError as ex:
-                if not _is_illegal_address(ex):
+                if not is_illegal_address_error(ex):
                     raise
 
                 _LOGGER.debug(
@@ -540,7 +522,7 @@ class ModbusController(EntityController, UnloadController):
                         assert len(read) == 1
                         read_values.append((address, read))
                     except ModbusClientFailedError as ex:
-                        if not _is_illegal_address(ex):
+                        if not is_illegal_address_error(ex):
                             raise
 
                         _LOGGER.warning(
@@ -590,81 +572,58 @@ class ModbusController(EntityController, UnloadController):
             await self._remote_control_manager.became_connected_callback()
 
     @staticmethod
-    async def autodetect(client: ModbusClient, slave: int, adapter_config: dict[str, Any]) -> tuple[str, str]:
+    async def autodetect(client: ModbusClient, slave: int, max_read: int) -> tuple[str, str]:
         """
         Attempts to auto-detect the inverter type at the other end of the given connection
 
         :returns: Tuple of (inverter type name e.g. "H1", inverter full name e.g. "H1-3.7-E")
         """
-        # Annoyingly pymodbus logs the important stuff to its logger, and doesn't add that info to the exceptions it
-        # throws
-        spy_handler = _SpyHandler()
-        pymodbus_logger = logging.getLogger("pymodbus")
-
-        try:
-            pymodbus_logger.addHandler(spy_handler)
-
-            # All known inverter types expose the model number at holding register 30000 onwards.
-            # (The H1 series additionally expose some model info in input registers))
-            # Holding registers 30000-300015 seem to be all used for the model, with registers
-            # after the model containing 32 (an ascii space) or 0. Input registers 10008 onwards
-            # are for the serial number (and there doesn't seem to be enough space to hold all models!)
-            # The H3 starts the model number with a space, annoyingly.
-            # Some models (H1-5.0-E-G2 and H3-PRO) pack two ASCII chars into each register.
-            register_values: list[int] = []
-            start_address = _MODEL_START_ADDRESS
-            while len(register_values) < _MODEL_LENGTH:
-                register_values.extend(
-                    await client.read_registers(
-                        start_address,
-                        min(adapter_config[MAX_READ], _MODEL_LENGTH - len(register_values)),
-                        RegisterType.HOLDING,
-                        slave,
-                    )
+        # All known inverter types expose the model number at holding register 30000 onwards.
+        # (The H1 series additionally expose some model info in input registers))
+        # Holding registers 30000-300015 seem to be all used for the model, with registers
+        # after the model containing 32 (an ascii space) or 0. Input registers 10008 onwards
+        # are for the serial number (and there doesn't seem to be enough space to hold all models!)
+        # The H3 starts the model number with a space, annoyingly.
+        # Some models (H1-5.0-E-G2 and H3-PRO) pack two ASCII chars into each register.
+        register_values: list[int] = []
+        start_address = _MODEL_START_ADDRESS
+        while len(register_values) < _MODEL_LENGTH:
+            register_values.extend(
+                await client.read_registers(
+                    start_address,
+                    min(max_read, _MODEL_LENGTH - len(register_values)),
+                    RegisterType.HOLDING,
+                    slave,
                 )
-                start_address += adapter_config[MAX_READ]
+            )
+            start_address += max_read
 
-            # If they've packed 2 ASCII chars into each register, unpack them
-            if (register_values[0] & 0xFF00) != 0:
-                model_chars = []
-                # High byte, then low byte
-                for register in register_values:
-                    model_chars.append((register >> 8) & 0xFF)
-                    model_chars.append(register & 0xFF)
+        # If they've packed 2 ASCII chars into each register, unpack them
+        if (register_values[0] & 0xFF00) != 0:
+            model_chars = []
+            # High byte, then low byte
+            for register in register_values:
+                model_chars.append((register >> 8) & 0xFF)
+                model_chars.append(register & 0xFF)
+        else:
+            model_chars = register_values
+
+        # Stop as soon as we find something non-printable-ASCII
+        full_model = ""
+        for char in model_chars:
+            if 0x20 <= char < 0x7F:
+                full_model += chr(char)
             else:
-                model_chars = register_values
+                break
+        # Take off tailing spaces and H3's leading space
+        full_model = full_model.strip()
+        for model in INVERTER_PROFILES.values():
+            if re.match(model.model_pattern, full_model):
+                # Make sure that we can parse the capacity out
+                capacity = model.inverter_capacity(full_model)
+                _LOGGER.info("Autodetected inverter as '%s' (%s, %sW)", model.model, full_model, capacity)
+                return model.model, full_model
 
-            # Stop as soon as we find something non-printable-ASCII
-            full_model = ""
-            for char in model_chars:
-                if 0x20 <= char < 0x7F:
-                    full_model += chr(char)
-                else:
-                    break
-            # Take off tailing spaces and H3's leading space
-            full_model = full_model.strip()
-            for model in INVERTER_PROFILES.values():
-                if re.match(model.model_pattern, full_model):
-                    # Make sure that we can parse the capacity out
-                    capacity = model.inverter_capacity(full_model)
-                    _LOGGER.info("Autodetected inverter as '%s' (%s, %sW)", model.model, full_model, capacity)
-                    return model.model, full_model
-
-            # We've read the model type, but been unable to match it against a supported model
-            _LOGGER.error("Did not recognise inverter model '%s' (%s)", full_model, register_values)
-            raise UnsupportedInverterError(full_model)
-        except Exception as ex:
-            _LOGGER.exception("Autodetect: failed to connect to (%s)", client)
-            raise AutoconnectFailedError(spy_handler.records) from ex
-        finally:
-            pymodbus_logger.removeHandler(spy_handler)
-            await client.close()
-
-
-class _SpyHandler(logging.Handler):
-    def __init__(self) -> None:
-        super().__init__(level=logging.ERROR)
-        self.records: list[logging.LogRecord] = []
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self.records.append(record)
+        # We've read the model type, but been unable to match it against a supported model
+        _LOGGER.error("Did not recognise inverter model '%s' (%s)", full_model, register_values)
+        raise UnsupportedInverterError(full_model)

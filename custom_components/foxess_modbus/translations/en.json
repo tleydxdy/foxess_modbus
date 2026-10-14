@@ -1,60 +1,135 @@
 {
   "config": {
     "step": {
-      "select_adapter_type": {
-        "description": "How do you connect to your inverter?",
-        "data": {
-          "adapter_type": "Adapter Type"
+      "user": {
+        "title": "FoxESS - Modbus",
+        "description": "How is your inverter connected to Home Assistant?",
+        "menu_options": {
+          "tcp": "Direct connection to the inverter's LAN port, or an RS485-to-Ethernet adapter using Modbus TCP",
+          "rtu_over_tcp": "RS485-to-Ethernet adapter using Modbus RTU over TCP",
+          "udp": "RS485-to-Ethernet adapter using Modbus UDP",
+          "serial": "USB to RS485 adapter on a serial port"
         }
       },
-      "select_adapter_model": {
-        "description": "Choose your adapter model. This lets us use settings tailored to your adapter. If you don't see your model, choose \"Other\" and let us know: {discussions_link}.",
+      "tcp": {
+        "description": "Enter the connection details for your inverter or adapter.",
         "data": {
-          "adapter_model": "Adapter Model"
+          "host": "Hostname / IP address",
+          "port": "Port",
+          "modbus_slave": "Inverter slave ID",
+          "inverter_conn": "Connection"
+        },
+        "data_description": {
+          "host": "The hostname or IP address of the inverter (for a direct connection) or the adapter",
+          "port": "The port of the inverter (502 for a direct connection) or the adapter",
+          "modbus_slave": "This can be set from Settings -> Communication in the inverter menu",
+          "inverter_conn": "Whether this is a direct connection to the inverter's LAN port, or an RS485-to-Ethernet adapter"
+        },
+        "sections": {
+          "more_options": {
+            "name": "More options",
+            "data": {
+              "poll_rate": "Poll rate (seconds)",
+              "max_read": "Max read",
+              "round_sensor_values": "Round sensor values"
+            },
+            "data_description": {
+              "poll_rate": "How often the inverter is polled, in seconds",
+              "max_read": "The maximum number of registers to read at a time. Increase this to speed up polling; look at the debug log for problems if you do!",
+              "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
+            }
+          }
         }
       },
-      "tcp_adapter": {
-        "description": "Set up your adapter by following the instructions at {setup_link}.",
+      "rtu_over_tcp": {
+        "description": "Enter the connection details for your adapter.",
         "data": {
-          "protocol": "Protocol",
-          "protocol_with_recommendation": "Protocol",
-          "lan_connection_host": "Inverter hostname / IP address",
-          "adapter_host": "Adapter hostname / IP address",
-          "adapter_port": "Adapter port",
+          "host": "Hostname / IP address",
+          "port": "Port",
           "modbus_slave": "Inverter slave ID"
         },
         "data_description": {
-          "protocol_with_recommendation": "We recommend using {recommended_protocol} with this adapter, see the link above",
+          "host": "The hostname or IP address of the adapter",
+          "port": "The port of the adapter",
           "modbus_slave": "This can be set from Settings -> Communication in the inverter menu"
+        },
+        "sections": {
+          "more_options": {
+            "name": "More options",
+            "data": {
+              "poll_rate": "Poll rate (seconds)",
+              "max_read": "Max read",
+              "round_sensor_values": "Round sensor values"
+            },
+            "data_description": {
+              "poll_rate": "How often the inverter is polled, in seconds",
+              "max_read": "The maximum number of registers to read at a time. Increase this to speed up polling; look at the debug log for problems if you do!",
+              "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
+            }
+          }
         }
       },
-      "serial_adapter": {
-        "description": "Set up your adapter by following the instructions at {setup_link}.",
+      "udp": {
+        "description": "Enter the connection details for your adapter.",
         "data": {
-          "serial_device": "USB serial device",
+          "host": "Hostname / IP address",
+          "port": "Port",
           "modbus_slave": "Inverter slave ID"
         },
         "data_description": {
+          "host": "The hostname or IP address of the adapter",
+          "port": "The port of the adapter",
           "modbus_slave": "This can be set from Settings -> Communication in the inverter menu"
+        },
+        "sections": {
+          "more_options": {
+            "name": "More options",
+            "data": {
+              "poll_rate": "Poll rate (seconds)",
+              "max_read": "Max read",
+              "round_sensor_values": "Round sensor values"
+            },
+            "data_description": {
+              "poll_rate": "How often the inverter is polled, in seconds",
+              "max_read": "The maximum number of registers to read at a time. Increase this to speed up polling; look at the debug log for problems if you do!",
+              "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
+            }
+          }
+        }
+      },
+      "serial": {
+        "description": "Enter the connection details for your serial adapter.",
+        "data": {
+          "host": "USB serial device",
+          "modbus_slave": "Inverter slave ID"
+        },
+        "data_description": {
+          "host": "The path to the USB serial device which the adapter is connected to, e.g. /dev/ttyUSB0",
+          "modbus_slave": "This can be set from Settings -> Communication in the inverter menu"
+        },
+        "sections": {
+          "more_options": {
+            "name": "More options",
+            "data": {
+              "poll_rate": "Poll rate (seconds)",
+              "max_read": "Max read",
+              "round_sensor_values": "Round sensor values"
+            },
+            "data_description": {
+              "poll_rate": "How often the inverter is polled, in seconds",
+              "max_read": "The maximum number of registers to read at a time. Increase this to speed up polling; look at the debug log for problems if you do!",
+              "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
+            }
+          }
         }
       },
       "friendly_name": {
         "description": "If you have more than one inverter, you can give this one a name to tell them apart. If you only have one inverter, you can leave this empty!",
         "data": {
-          "friendly_name": "Friendly Name",
-          "autogenerate_entity_id_prefix": "Use the Friendly Name to auto-generate a prefix for all entity IDs",
-          "entity_id_prefix": "Entity ID Prefix"
+          "friendly_name": "Friendly Name"
         },
         "data_description": {
-          "friendly_name": "This is added to the end of all entity names, e.g. 'PV1 Power (Your Friendly Name)'",
-          "entity_id_prefix": "Added as a prefix to all of this inverter's entity IDs"
-        }
-      },
-      "add_another_inverter": {
-        "description": "Set-up complete. Do you want to add another inverter?",
-        "menu_options": {
-          "energy": "I'm done",
-          "select_adapter_type": "Add another inverter"
+          "friendly_name": "This is added to the end of all entity names, e.g. 'PV1 Power (Your Friendly Name)'"
         }
       },
       "energy": {
@@ -62,143 +137,71 @@
         "data": {
           "energy_dashboard": "Automatically configure the Energy Dashboard"
         }
+      },
+      "reconfigure": {
+        "description": "Enter the new connection details for your inverter. The inverter behind them must remain the same.",
+        "data": {
+          "host": "Hostname / IP address",
+          "port": "Port",
+          "modbus_slave": "Inverter slave ID",
+          "inverter_conn": "Connection"
+        },
+        "sections": {
+          "more_options": {
+            "name": "More options",
+            "data": {
+              "poll_rate": "Poll rate (seconds)",
+              "max_read": "Max read",
+              "round_sensor_values": "Round sensor values"
+            },
+            "data_description": {
+              "poll_rate": "How often the inverter is polled, in seconds",
+              "max_read": "The maximum number of registers to read at a time. Increase this to speed up polling; look at the debug log for problems if you do!",
+              "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
+            }
+          }
+        }
       }
     },
     "error": {
-      "already_in_progress": "Configuration flow is already in progress",
       "invalid_hostname": "Hostname / IP address \"{hostname}\" is not valid. Use an IP address (e.g. '192.168.0.10') or a hostname (e.g. 'mydevice' / 'mydevice.local')",
-      "duplicate_connection_details": "You have already set up an inverter with this address",
       "duplicate_friendly_name": "One of your other inverters has this friendly name. Please specify another",
-      "duplicate_entity_id_prefix": "Please enter a unique entity ID prefix",
-      "unable_to_generate_entity_id_prefix": "Unable to generate a unique entity ID prefix. Please specify one manually",
-      "invalid_entity_id_prefix": "Entity ID prefix must contain only lower-case letters, numbers and underscores, and must not begin/end with an underscore",
       "inverter_model_not_supported": "Inverter model \"{not_supported_model}\" is not supported",
-      "unable_to_connect_to_adapter": "Unable to connect to your adapter. Ensure that the adapter is properly configured (see the setup link above) and the connection details are correct, then try again. Details: {error_details}",
-      "unable_to_connect_to_inverter": "Unable to connect to your inverter. Make sure the connection details are correct and try again. Details: {error_details}",
-      "adapter_unable_to_communicate_with_inverter": "The adapter was unable to connect to the inverter. Ensure the adapter is properly configured and is correctly wired to your inverter (see the setup link above), then try again. Details: {error_details}",
-      "unable_to_communicate_with_inverter": "Error communicating with your inverter. Ensure that it has a compatible firmware version. Details: {error_details}",
-      "other_adapter_error": "Error connecting to your adapter or inverter. Ensure the adapter is properly configured and is correctly wired to your inverter (see the setup link above), then try again. Details: {error_details}",
-      "other_inverter_error": "Error connecting to your inverter. Details: {error_details}"
+      "cannot_connect": "Could not connect to your inverter. Check that the connection details are correct, then try again. Details: {error_details}",
+      "wrong_device": "The inverter behind these connection details is not the one configured here"
     },
     "abort": {
-      "already_configured": "You can only set up this integration once. If you need to reconfigure, click \"CONFIGURE\" or delete and then add again."
+      "already_configured": "An inverter with these connection details is already set up",
+      "wrong_device": "The inverter behind these connection details is not the one configured here"
     }
   },
   "options": {
     "step": {
-      "select_inverter": {
-        "description": "Select inverter to configure.",
+      "init": {
+        "description": "Options for this inverter.",
         "data": {
-          "inverter": ""
-        }
-      },
-      "inverter_options_category": {
-        "menu_options": {
-          "select_adapter_type": "Network settings",
-          "version_settings": "Version settings",
-          "inverter_advanced_options": "Advanced settings"
-        }
-      },
-      "select_adapter_type": {
-        "description": "How do you connect to your inverter?",
-        "data": {
-          "adapter_type": ""
-        }
-      },
-      "select_adapter_model": {
-        "description": "Choose your adapter model. This lets us use settings tailored to your adapter. If you don't see your model, choose \"Other\" and let us know: {discussions_link}.",
-        "data": {
-          "adapter_id": ""
-        }
-      },
-      "tcp_adapter": {
-        "description": "Set up your adapter by following the instructions at {setup_link}.",
-        "data": {
-          "protocol": "Protocol",
-          "protocol_with_recommendation": "Protocol",
-          "lan_connection_host": "Inverter hostname / IP address",
-          "adapter_host": "Adapter hostname / IP address",
-          "adapter_port": "Adapter port",
-          "modbus_slave": "Inverter slave ID"
-        },
-        "data_description": {
-          "protocol_with_recommendation": "We recommend using {recommended_protocol} with this adapter, see the link above",
-          "modbus_slave": "This can be set from Settings -> Communication in the inverter menu"
-        }
-      },
-      "serial_adapter": {
-        "description": "Set up your adapter by following the instructions at {setup_link}.",
-        "data": {
-          "serial_device": "USB serial device",
-          "modbus_slave": "Inverter slave ID"
-        },
-        "data_description": {
-          "modbus_slave": "This can be set from Settings -> Communication in the inverter menu"
-        }
-      },
-      "version_settings": {
-        "description": "Version settings for \"{inverter}\"",
-        "data": {
-          "version": "Inverter's Manager Version"
-        },
-        "data_description": {
-          "version": "If you're running old inverter firmware, you may be able to select it here"
-        }
-      },
-      "inverter_advanced_options": {
-        "description": "Options for \"{inverter}\".",
-        "data": {
-          "round_sensor_values": "Round sensor values",
+          "version": "Inverter's Manager Version",
           "poll_rate": "Poll rate (seconds)",
-          "max_read": "Max read"
+          "max_read": "Max read",
+          "round_sensor_values": "Round sensor values"
         },
         "data_description": {
-          "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values",
-          "poll_rate": "The default for your adapter type is {default_poll_rate} seconds. Leave empty to use the default",
-          "max_read": "The default for your adapter type is {default_max_read}. Leave empty to use the default. Warning: Look at the debug log for problems if you increase this!"
+          "version": "If you're running old inverter firmware, you may be able to select it here",
+          "poll_rate": "Currently {poll_rate} seconds. Leave empty to use the current value",
+          "max_read": "Currently {max_read}. Leave empty to use the current value. Warning: Look at the debug log for problems if you increase this!",
+          "round_sensor_values": "Reduces Home Assistant database size by rounding and filtering sensor values"
         }
       }
     },
-    "error": {
-      "invalid_hostname": "Hostname / IP address \"{hostname}\" is not valid. Use an IP address (e.g. '192.168.0.10') or a hostname (e.g. 'mydevice' / 'mydevice.local')",
-      "duplicate_connection_details": "You have already set up an inverter with this address",
-      "inverter_model_not_supported": "Inverter model \"{not_supported_model}\" is not supported",
-      "unable_to_connect_to_adapter": "Unable to connect to your adapter. Ensure that the adapter is properly configured (see the setup link above) and the connection details are correct, then try again. Details: {error_details}",
-      "unable_to_connect_to_inverter": "Unable to connect to your inverter. Make sure the connection details are correct and try again. Details: {error_details}",
-      "adapter_unable_to_communicate_with_inverter": "The adapter was unable to connect to the inverter. Ensure the adapter is properly configured and is correctly wired to your inverter (see the setup link above), then try again. Details: {error_details}",
-      "unable_to_communicate_with_inverter": "Error communicating with your inverter. Ensure that it has a compatible firmware version. Details: {error_details}",
-      "other_adapter_error": "Error connecting to your adapter or inverter. Ensure the adapter is properly configured and is correctly wired to your inverter (see the setup link above), then try again. Details: {error_details}",
-      "other_inverter_error": "Error connecting to your inverter. Details: {error_details}"
+    "abort": {
+      "entry_not_loaded": "This integration is not loaded, so its options cannot be changed"
     }
   },
   "selector": {
-    "inverter_adapter_types": {
+    "inverter_connections": {
       "options": {
-        "direct": "Direct LAN Connection",
-        "serial": "USB to RS485 Adapter",
-        "network": "Ethernet to Modbus/RS485 Adapter"
-      }
-    },
-    "network_protocols": {
-      "options": {
-        "tcp": "Modbus TCP",
-        "udp": "Modbus UDP",
-        "rtu_over_tcp": "Modbus RTU over TCP"
-      }
-    },
-    "inverter_adapter_models": {
-      "options": {
-        "dsd_tech_sh_u10": "DSD TECH SH-U10",
-        "runcci_yun_usb_to_rs485_converter": "RUNCCI-YUN USB to RS485 Converter",
-        "waveshare_usb_to_rs485_b": "Waveshare USB to RS485 (B)",
-        "serial_other": "Other",
-        "elfin_ew11": "Elfin EW11/EW11A",
-        "usr_tcp232_304": "USR-TCP232-304",
-        "usr_tcp232_410s": "USR-TCP232-410s",
-        "usr_w610": "USR-W610",
-        "waveshare_rs485_to_eth_b": "Waveshare Modbus RTU Relay",
-        "ebyte_na111_series": "Ebyte NA111 series (NA111 / -A / -E / -M)",
-        "network_other": "Other"
+        "lan": "Direct connection to the inverter's LAN port",
+        "aux": "RS485-to-Ethernet adapter"
       }
     }
   },

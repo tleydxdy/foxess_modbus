@@ -4,9 +4,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry
 
+from ..common.types import HassData
 from ..const import DOMAIN
 from ..const import FRIENDLY_NAME
 from ..modbus_controller import ModbusController
+
+
+def get_all_controllers(hass: HomeAssistant) -> list[ModbusController]:
+    """Collect the controllers from all loaded config entries"""
+
+    hass_data: HassData = hass.data.get(DOMAIN, {})
+    return [x for entry_data in hass_data.values() for x in entry_data["controllers"]]
 
 
 def get_controller_from_friendly_name_or_device_id(

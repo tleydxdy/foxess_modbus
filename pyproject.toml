@@ -9,17 +9,10 @@ warn_unused_configs = true
 warn_unused_ignores = true
 namespace_packages = true
 explicit_package_bases = true
-exclude = [
-    'custom_components/foxess_modbus/vendor',
-]
 
 [[tool.mypy.overrides]]
 module = 'serial.*'
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = 'custom_components.foxess_modbus.vendor.*'
-follow_imports = 'skip'
 
 [tool.ruff]
 lint.select = ["E", "F", "I", "N", "ANN", "S", "B", "A", "COM", "C4", "DTZ", "ISC", "ICN", "G",
@@ -36,9 +29,7 @@ lint.unfixable = [
     "F841", # unused-variable
 ]
 line-length = 120
-extend-exclude = [
-    'custom_components/foxess_modbus/vendor',
-]
+extend-exclude = []
 
 [tool.ruff.lint.isort]
 force-single-line = true

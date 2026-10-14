@@ -1,5 +1,10 @@
 homeassistant==2025.8.0
 
+#pip requirements brought in by the modbus integration (see core/homeassistant/components/modbus/manifest.json),
+#pinned here so that our venv matches the environment this code runs in
+modbus-connection[tmodbus]==4.12.4
+tmodbus==0.6.2
+
 # Testing
 pytest-homeassistant-custom-component==0.13.269  # Matching version
 psutil-home-assistant  # Not sure why this is needed?

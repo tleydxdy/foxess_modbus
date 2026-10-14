@@ -9,9 +9,9 @@ from homeassistant.core import ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from ..client.modbus_client import ModbusClientFailedError
 from ..const import DOMAIN
-from ..modbus_controller import ModbusController
-from ..vendor.pymodbus import ModbusIOException
+from .utils import get_all_controllers
 from .utils import get_controller_from_friendly_name_or_device_id
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -38,11 +38,11 @@ _WRITE_SCHEMA = vol.Schema(
 )
 
 
-def register(hass: HomeAssistant, controllers: list[ModbusController]) -> None:
+def register(hass: HomeAssistant) -> None:
     """Register the service with hass"""
 
     async def _callback(service_data: ServiceCall) -> None:
-        await hass.loop.create_task(_write_service(controllers, service_data, hass))
+        await hass.loop.create_task(_write_service(service_data, hass))
 
     hass.services.async_register(
         DOMAIN,
@@ -52,23 +52,19 @@ def register(hass: HomeAssistant, controllers: list[ModbusController]) -> None:
     )
 
 
-async def _write_service(
-    controllers: list[ModbusController],
-    service_data: ServiceCall,
-    hass: HomeAssistant,
-) -> None:
+async def _write_service(service_data: ServiceCall, hass: HomeAssistant) -> None:
     """Write service"""
     # Support both for backwards compatibility
     inverter_id = service_data.data.get("inverter")
     friendly_name = service_data.data.get("friendly_name")
     controller = get_controller_from_friendly_name_or_device_id(
-        inverter_id if inverter_id is not None else friendly_name, controllers, hass
+        inverter_id if inverter_id is not None else friendly_name, get_all_controllers(hass), hass
     )
 
     try:
         start_address = service_data.data["start_address"]
         values = service_data.data["values"].split(",")
         await controller.write_registers(start_address, values)
-    except ModbusIOException as ex:
+    except ModbusClientFailedError as ex:
         _LOGGER.warning(ex, exc_info=True)
         raise HomeAssistantError() from ex

@@ -11,12 +11,13 @@ from homeassistant.core import ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
+from ..client.modbus_client import ModbusClientFailedError
 from ..const import DOMAIN
 from ..entities.modbus_charge_period_sensors import is_time_value_valid
 from ..entities.modbus_charge_period_sensors import parse_time_value
 from ..entities.modbus_charge_period_sensors import serialize_time_to_value
 from ..modbus_controller import ModbusController
-from ..vendor.pymodbus import ModbusIOException
+from .utils import get_all_controllers
 from .utils import get_controller_from_friendly_name_or_device_id
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -106,11 +107,11 @@ _UPDATE_ALL_CHARGE_PERIODS_SCHEMA = vol.Schema(
 )
 
 
-def register(hass: HomeAssistant, controllers: list[ModbusController]) -> None:
+def register(hass: HomeAssistant) -> None:
     """Register the services with HA"""
 
     async def _update_charge_period_callback(service_data: ServiceCall) -> None:
-        await hass.loop.create_task(_update_charge_period(controllers, service_data, hass))
+        await hass.loop.create_task(_update_charge_period(service_data, hass))
 
     hass.services.async_register(
         DOMAIN,
@@ -120,7 +121,7 @@ def register(hass: HomeAssistant, controllers: list[ModbusController]) -> None:
     )
 
     async def _update_all_charge_periods_callback(service_data: ServiceCall) -> None:
-        await hass.loop.create_task(_update_all_charge_periods(controllers, service_data, hass))
+        await hass.loop.create_task(_update_all_charge_periods(service_data, hass))
 
     hass.services.async_register(
         DOMAIN,
@@ -140,12 +141,10 @@ class ChargePeriod:
     end: time
 
 
-async def _update_all_charge_periods(
-    controllers: list[ModbusController],
-    service_data: ServiceCall,
-    hass: HomeAssistant,
-) -> None:
-    controller = get_controller_from_friendly_name_or_device_id(service_data.data["inverter"], controllers, hass)
+async def _update_all_charge_periods(service_data: ServiceCall, hass: HomeAssistant) -> None:
+    controller = get_controller_from_friendly_name_or_device_id(
+        service_data.data["inverter"], get_all_controllers(hass), hass
+    )
 
     charge_periods: list[ChargePeriod] = []
     for charge_period in service_data.data["charge_periods"]:
@@ -161,12 +160,10 @@ async def _update_all_charge_periods(
     await _set_charge_periods(controller, charge_periods)
 
 
-async def _update_charge_period(
-    controllers: list[ModbusController],
-    service_data: ServiceCall,
-    hass: HomeAssistant,
-) -> None:
-    controller = get_controller_from_friendly_name_or_device_id(service_data.data["inverter"], controllers, hass)
+async def _update_charge_period(service_data: ServiceCall, hass: HomeAssistant) -> None:
+    controller = get_controller_from_friendly_name_or_device_id(
+        service_data.data["inverter"], get_all_controllers(hass), hass
+    )
     charge_period_index = service_data.data["charge_period"] - 1
 
     if charge_period_index >= len(controller.charge_periods):
@@ -267,6 +264,6 @@ async def _set_charge_periods(controller: ModbusController, charge_periods: list
 
     try:
         await controller.write_registers(write_start_address, write_values)
-    except ModbusIOException as ex:
+    except ModbusClientFailedError as ex:
         _LOGGER.warning(ex, exc_info=True)
         raise HomeAssistantError() from ex
